@@ -476,7 +476,9 @@ svg.noise-bg {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
+  position: relative;
+  /* 좌우 여백은 JS(alignMonitorToCanvas)가 메인 이미지의 좌우 끝선에 맞춰 갱신 */
+  padding: 0 var(--mon-pad-r, 16px) 0 var(--mon-pad-l, 16px);
   height: 26px;
   border-bottom: 1px solid rgba(255,255,255,0.1);
   flex-shrink: 0;
@@ -493,6 +495,8 @@ svg.noise-bg {
   gap: 8px;
   cursor: pointer;
   user-select: none;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .monitor-toggle {
@@ -504,13 +508,22 @@ svg.noise-bg {
 .data-monitor.collapsed .monitor-toggle { transform: rotate(180deg); }
 
 .monitor-status {
-  font-size: 8px;
-  color: rgba(255,255,255,0.4);
+  /* 데이터 묶음을 메인 이미지의 가로 중심에 가운데 정렬 */
+  position: absolute;
+  top: 50%;
+  left: var(--mon-center, 50%);
+  transform: translate(-50%, -50%);
+  font-size: 9px;
+  color: rgba(255,255,255,0.6);
   letter-spacing: 0.05em;
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
+  gap: 14px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
+.monitor-status > span:empty { display: none; }
 
 .monitor-columns {
   display: flex;
@@ -941,7 +954,6 @@ svg.noise-bg {
   <div class="data-monitor" id="dataMonitor">
     <div class="monitor-header" onclick="toggleDataMonitor()">
       <div class="monitor-title">
-        DATA MONITOR
         <span class="monitor-toggle" id="monitorToggle">▾</span>
       </div>
       <div class="monitor-status">
@@ -1491,6 +1503,22 @@ function resizeCanvas(recenter) {
   canvasWrap.style.left = Math.round(_canvasDragX) + 'px';
   canvasWrap.style.top  = Math.round(_canvasDragY) + 'px';
   drawReticle(CANVAS_W, CANVAS_H);
+  alignMonitorToCanvas();
+}
+
+// DATA MONITOR 헤더를 메인 이미지에 맞춤: 제목은 이미지 좌측 끝선 안쪽, 데이터는 이미지 가로 중심
+function alignMonitorToCanvas() {
+  const dm = document.getElementById('dataMonitor');
+  if (!dm) return;
+  const c = canvas.getBoundingClientRect();
+  const m = dm.getBoundingClientRect();
+  const INSET = 8; // 이미지 끝선에서 안쪽으로 들어가는 거리
+  const padL = Math.max(16, Math.round(c.left - m.left + INSET));
+  const padR = Math.max(16, Math.round(m.right - c.right + INSET));
+  const center = Math.round((c.left + c.right) / 2 - m.left);
+  dm.style.setProperty('--mon-pad-l', padL + 'px');
+  dm.style.setProperty('--mon-pad-r', padR + 'px');
+  dm.style.setProperty('--mon-center', center + 'px');
 }
 window.addEventListener('resize', () => resizeCanvas(true));
 
@@ -1511,6 +1539,7 @@ window.addEventListener('resize', () => resizeCanvas(true));
     _canvasDragY = origY + (e.clientY - startY);
     canvasWrap.style.left = _canvasDragX + 'px';
     canvasWrap.style.top  = _canvasDragY + 'px';
+    alignMonitorToCanvas();
   });
   canvasWrap.addEventListener('pointerup', () => canvasWrap.classList.remove('dragging'));
   canvasWrap.addEventListener('pointercancel', () => canvasWrap.classList.remove('dragging'));
